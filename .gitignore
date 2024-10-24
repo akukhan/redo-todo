@@ -33,3 +33,5 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+.react-native-svg-Thf2MIhp\lib\typescript\web

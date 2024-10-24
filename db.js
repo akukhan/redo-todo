@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 
 
 let db;
+let dbsessions ;
 
 
 const initializeDatabase = async () => {
@@ -30,7 +31,131 @@ const initializeDatabase = async () => {
       );
     `);
   }
+
+  if (!dbsessions) {
+    dbsessions = await SQLite.openDatabaseAsync('sessions.db');
+
+
+    await dbsessions.execAsync(`
+      PRAGMA journal_mode = WAL;
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        focus_duration INTEGER,
+        break_duration INTEGER,
+        time_spent INTEGER,
+        is_completed BOOLEAN,
+        session_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT (datetime('now')), 
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+  }
+
 };
+
+// adds a new Pomodoro session 
+export const addSession = async (sessionData) => {
+  const { focus_duration, break_duration, time_spent, is_completed } = sessionData;
+
+  try {
+    await dbsessions.runAsync(
+      `INSERT INTO sessions (focus_duration, break_duration, time_spent, is_completed) 
+       VALUES (?, ?, ?, ?);`,
+      [focus_duration, break_duration, time_spent, is_completed ? 1 : 0]
+    );
+    console.log('Session added successfully');
+  } catch (error) {
+    console.error('Error adding session: ', error);
+  }
+};
+
+//get all Sessions
+
+export const allSessions = async() =>{
+  try {
+    const allRows = await dbsessions.getAllAsync(
+      `SELECT * FROM sessions;`,      
+    );
+ 
+    return allRows;
+  } catch (error) {
+    console.error('Error fetching All sessions: ', error);
+    return [];
+  }
+}
+
+//Get Sessions by Date
+export const getSessionsByDate = async (date) => {
+  try {
+    const allRows = await dbsessions.getAllAsync(
+      `SELECT * FROM sessions WHERE date(session_date) = ? ORDER BY session_date DESC;`,
+      [date]
+    );
+    return allRows;
+  } catch (error) {
+    console.error('Error fetching sessions: ', error);
+    return [];
+  }
+};
+
+//Update Session
+export const updateSession = async (id, sessionData) => {
+  const { time_spent, is_completed } = sessionData;
+
+  try {
+    await dbsessions.runAsync(
+      `UPDATE sessions 
+       SET time_spent = ?, is_completed = ?, updated_at = datetime('now')
+       WHERE id = ?;`,
+      [time_spent, is_completed ? 1 : 0, id]
+    );
+    console.log('Session updated successfully');
+  } catch (error) {
+    console.error('Error updating session: ', error);
+  }
+};
+
+// Get Total Focus Time
+export const getTotalFocusTime = async () => {
+  try {
+    const result = await dbsessions.getAllAsync(
+      `SELECT SUM(time_spent) AS total_focus_time FROM sessions WHERE is_completed = 1;`
+    );
+    return result[0]?.total_focus_time || 0;
+  } catch (error) {
+    console.error('Error fetching total focus time: ', error);
+    return 0;
+  }
+};
+
+// Delete Old Sessions (Optional)
+export const deleteOldSessions = async (days) => {
+  try {
+    await dbsessions.runAsync(
+      `DELETE FROM sessions WHERE session_date <= date('now', ?);`,
+      [`-${days} days`]
+    );
+    console.log(`Sessions older than ${days} days deleted.`);
+  } catch (error) {
+    console.error('Error deleting old sessions: ', error);
+  }
+};
+
+export const getFocusStreak = async () => {
+  try {
+    const result = await dbsessions.getAllAsync(`
+      SELECT COUNT(DISTINCT date(session_date)) AS streak
+      FROM sessions
+      WHERE session_date >= date('now', '-7 days');
+    `);
+    return result[0]?.streak || 0;
+  } catch (error) {
+    console.error('Error fetching streak: ', error);
+    return 0;
+  }
+};
+
+
 
 const fetchTasks = async () => {
   try {
@@ -127,5 +252,12 @@ export default {
   fetchTaskById,
   updateTaskTime,
   getTaskById,
-  updateTaskStatus
+  updateTaskStatus,
+  addSession,
+  getSessionsByDate,
+  updateSession,
+  getTotalFocusTime,
+  deleteOldSessions,
+  getFocusStreak,
+  allSessions
 };

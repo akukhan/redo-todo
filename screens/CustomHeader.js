@@ -1,9 +1,10 @@
-import React from 'react';
+import React,{ useContext} from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
+import { TaskContext } from '../TaskContext';
 
 const CustomHeader = ({ selectedCategory, setSelectedCategory }) => {
-
+  const { categories } = useContext(TaskContext);
 
   return (
     <View style={styles.headerContainer}>
@@ -11,17 +12,10 @@ const CustomHeader = ({ selectedCategory, setSelectedCategory }) => {
       <TouchableOpacity style={styles.pickerContainer}>
         <RNPickerSelect
           onValueChange={(value) => setSelectedCategory(value)}
-          items={[
-            { label: 'All', value: 'All' },
-            { label: 'Work', value: 'Work' },
-            { label: 'Personal', value: 'Personal' },
-            { label: 'Home', value: 'Home' },
-            { label: 'Shopping', value: 'Shopping' },
-            { label: 'Completed', value: 'Completed' },
-          ]}
+          items={categories}
           value={selectedCategory}
           style={pickerSelectStyles}
-          placeholder={{ label: 'Select Category', value: null }}
+          placeholder={{ label: 'Select', value: null }}
         />
       </TouchableOpacity>
     </View>
